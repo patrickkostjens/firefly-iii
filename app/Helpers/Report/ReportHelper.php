@@ -16,15 +16,12 @@ namespace FireflyIII\Helpers\Report;
 use Carbon\Carbon;
 use FireflyIII\Helpers\Collection\Bill as BillCollection;
 use FireflyIII\Helpers\Collection\BillLine;
-use FireflyIII\Helpers\Collection\Category as CategoryCollection;
 use FireflyIII\Helpers\Collector\JournalCollectorInterface;
 use FireflyIII\Helpers\FiscalHelperInterface;
 use FireflyIII\Models\Bill;
-use FireflyIII\Models\Category;
 use FireflyIII\Models\Transaction;
 use FireflyIII\Repositories\Bill\BillRepositoryInterface;
 use FireflyIII\Repositories\Budget\BudgetRepositoryInterface;
-use FireflyIII\Repositories\Category\CategoryRepositoryInterface;
 use Illuminate\Support\Collection;
 
 /**
@@ -69,7 +66,6 @@ class ReportHelper implements ReportHelperInterface
         $repository = app(BillRepositoryInterface::class);
         $bills      = $repository->getBillsForAccounts($accounts);
         $collector  = app(JournalCollectorInterface::class);
-        $collector->setUser(auth()->user());
         $collector->setAccounts($accounts)->setRange($start, $end)->setBills($bills);
         $journals   = $collector->getJournals();
         $collection = new BillCollection;

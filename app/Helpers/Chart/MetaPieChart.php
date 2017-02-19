@@ -99,7 +99,6 @@ class MetaPieChart implements MetaPieChartInterface
         if ($this->collectOtherObjects && $direction === 'income') {
             /** @var JournalCollectorInterface $collector */
             $collector = app(JournalCollectorInterface::class);
-            $collector->setUser(auth()->user());
             $collector->setAccounts($this->accounts)->setRange($this->start, $this->end)->setTypes([TransactionType::DEPOSIT]);
             $journals                                            = $collector->getJournals();
             $sum                                                 = strval($journals->sum('transaction_amount'));
@@ -205,7 +204,6 @@ class MetaPieChart implements MetaPieChartInterface
         }
         /** @var JournalCollectorInterface $collector */
         $collector = app(JournalCollectorInterface::class);
-        $collector->setUser(auth()->user());
         $collector->setAccounts($this->accounts);
         $collector->setRange($this->start, $this->end);
         $collector->setTypes($types);
@@ -263,7 +261,6 @@ class MetaPieChart implements MetaPieChartInterface
         $chartData  = [];
         $names      = [];
         $repository = app($this->repositories[$type]);
-        $repository->setUser($this->user);
         foreach ($array as $objectId => $amount) {
             if (!isset($names[$objectId])) {
                 $object           = $repository->find(intval($objectId));

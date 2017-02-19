@@ -55,9 +55,7 @@ class JournalCollector implements JournalCollectorInterface
             'transaction_journals.description',
             'transaction_journals.date',
             'transaction_journals.encrypted',
-            //'transaction_journals.transaction_currency_id',
             'transaction_currencies.code as transaction_currency_code',
-            //'transaction_currencies.symbol as transaction_currency_symbol',
             'transaction_types.type as transaction_type_type',
             'transaction_journals.bill_id',
             'bills.name as bill_name',
@@ -172,10 +170,10 @@ class JournalCollector implements JournalCollectorInterface
         $set->each(
             function (Transaction $transaction) {
                 $transaction->date        = new Carbon($transaction->date);
-                $transaction->description = $transaction->encrypted ? Crypt::decrypt($transaction->description) : $transaction->description;
+                $transaction->description = Steam::decrypt(intval($transaction->encrypted), $transaction->description);
 
                 if (!is_null($transaction->bill_name)) {
-                    $transaction->bill_name = $transaction->bill_name_encrypted ? Crypt::decrypt($transaction->bill_name) : $transaction->bill_name;
+                    $transaction->bill_name = Steam::decrypt(intval($transaction->bill_name_encrypted), $transaction->bill_name);
                 }
 
                 try {
@@ -506,36 +504,6 @@ class JournalCollector implements JournalCollectorInterface
     {
         $this->joinOpposingTables();
 
-        $accountIds = $this->accountIds;
-        $this->query->where(
-            function (EloquentBuilder $q1) use ($accountIds) {
-                // set 1:
-                // where source is in the set of $accounts
-                // but destination is not.
-                $q1->where(
-                    function (EloquentBuilder $q2) use ($accountIds) {
-                        // transactions.account_id in set
-                        $q2->whereIn('transactions.account_id', $accountIds);
-                        // opposing.account_id not in set
-                        $q2->whereNotIn('opposing.account_id', $accountIds);
-
-                    }
-                );
-                // set 1:
-                // where source is not in the set of $accounts
-                // but destination is.
-                $q1->orWhere(
-                    function (EloquentBuilder $q3) use ($accountIds) {
-                        // transactions.account_id not in set
-                        $q3->whereNotIn('transactions.account_id', $accountIds);
-                        // B in set
-                        // opposing.account_id not in set
-                        $q3->whereIn('opposing.account_id', $accountIds);
-                    }
-                );
-            }
-        );
-
         return $this;
     }
 
@@ -637,12 +605,12 @@ class JournalCollector implements JournalCollectorInterface
                     continue;
                 }
                 // make property string:
-                $journalId = $transaction->transaction_journal_id;
-                $amount    = Steam::positive($transaction->transaction_amount);
-                $source    = $transaction->account_id;
-                $dest      = $transaction->opposing_account_id;
-                $key       = $journalId . $source . $dest . $amount;
-
+                $journalId  = $transaction->transaction_journal_id;
+                $amount     = Steam::positive($transaction->transaction_amount);
+                $accountIds = [intval($transaction->account_id), intval($transaction->opposing_account_id)];
+                sort($accountIds);
+                $key = $journalId . '-' . join(',', $accountIds) . '-' . $amount;
+                Log::debug(sprintf('Key is %s', $key));
                 if (!isset($count[$key])) {
                     // not yet counted? add to new set and count it:
                     $new->push($transaction);
